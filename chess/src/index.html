@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chess AI</title>
+    <link rel="stylesheet" href="src/lib/chessboard-1.0.0.min.css" />
+    <link rel="stylesheet" href="src/css/style.css" />
+    <style>
+      body {
+        background-color: #aefeff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      .container {
+        text-align: center;
+        border: 2px solid black;
+        padding: 50px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: red;
+        font-size: 32px;
+      }
+
+      .mode-button {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 10px;
+        border: 1px solid #333;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .mode-button:hover {
+        background-color: #f2f2f2;
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Welcome to Chess AI</h1>
+      <button
+        class="mode-button"
+        onclick="window.location.href='two_player.html'"
+      >
+        Chơi 2 người
+      </button>
+      <button class="mode-button" onclick="window.location.href='vs_ai.html'">
+        Chơi với AI
+      </button>
+    </div>
+
+    <!-- Thư viện -->
+    <script src="src/lib/jquery-3.7.1.min.js"></script>
+    <script src="src/lib/chess.min.js"></script>
+    <script src="src/lib/chessboard-1.0.0.min.js"></script>
+    <script src="src/js/two_players.js"></script>
+  </body>
+</html>
