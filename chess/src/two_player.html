@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chơi 2 người</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="lib/chessboard-1.0.0.min.css" />
+  </head>
+  <body>
+    <!-- Phần giao diện của người chơi bên trái -->
+    <div class="player player-left">
+      <img src="assets/default-avatar.jpg" class="avatar" />
+      <div class="name" id="name1">Player 1</div>
+      <div class="timer" id="timer1">20:00</div>
+    </div>
+
+    <!-- Bàn cờ sẽ được hiển thị tại đây -->
+    <div id="board" class="chess-board"></div>
+
+    <!-- Phần giao diện của người chơi bên phải -->
+    <div class="player player-right">
+      <img src="assets/default-avatar.jpg" class="avatar" />
+      <div class="name" id="name2">Player 2</div>
+      <div class="timer" id="timer2">20:00</div>
+    </div>
+
+    <!-- Form nhập tên người chơi -->
+    <div class="overlay" id="name-form">
+      <div class="form-container">
+        <h2>Nhập tên người chơi</h2>
+        <input type="text" id="input1" placeholder="Player 1" />
+        <input type="text" id="input2" placeholder="Player 2" />
+        <button onclick="startGame()">Bắt đầu</button>
+      </div>
+    </div>
+
+    <script src="lib/jquery-3.7.1.min.js"></script>
+    <script src="lib/chess.min.js"></script>
+    <script src="lib/chessboard-1.0.0.min.js"></script>
+    <script src="js/two_players.js"></script>
+  </body>
+</html>

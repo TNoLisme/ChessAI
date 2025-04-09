@@ -1,0 +1,133 @@
+let board;
+let game = new Chess();
+
+let currentPlayer = "white"; // bắt đầu là trắng (player 1)
+
+let timeWhite = 1200; // 20 phút
+let timeBlack = 1200;
+
+let timerWhite, timerBlack;
+
+function startGame() {
+  console.log("Đã bấm Bắt đầu!");
+
+  const name1 = document.getElementById("input1").value || "Player 1";
+  const name2 = document.getElementById("input2").value || "Player 2";
+
+  document.getElementById("name1").textContent = name1;
+  document.getElementById("name2").textContent = name2;
+
+  document.getElementById("name-form").style.display = "none";
+
+  document.getElementById("board").style.display = "block";
+  document.querySelector(".player-left").style.display = "flex";
+  document.querySelector(".player-right").style.display = "flex";
+
+  board = Chessboard("board", {
+    draggable: true, // ✅ Cho phép kéo thả quân cờ
+    position: "start",
+    onDrop: onDrop, // ✅ Gắn sự kiện xử lý khi thả quân cờ
+    pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
+  });
+
+  startTimer();
+}
+
+function onDrop(source, target) {
+  const move = game.move({
+    from: source,
+    to: target,
+    promotion: "q", // Luôn phong cấp thành hậu
+  });
+
+  if (move === null) {
+    return "snapback"; // Nếu nước đi không hợp lệ, trả quân cờ về vị trí cũ
+  }
+
+  board.position(game.fen()); // Cập nhật trạng thái bàn cờ
+
+  // ✅ Chuyển lượt sau khi đi
+  currentPlayer = currentPlayer === "white" ? "black" : "white";
+}
+
+let selectedSquare = null;
+let possibleMoves = [];
+function onSquareClick(square, event) {
+  const piece = game.get(square);
+
+  if (!selectedSquare) {
+    if (piece && piece.color === (currentPlayer === "white" ? "w" : "b")) {
+      const moves = game.moves({ square: square, verbose: true });
+      if (moves.length === 0) return;
+
+      selectedSquare = square;
+      possibleMoves = moves.map((m) => m.to);
+      highlightMoves(possibleMoves);
+    }
+  } else {
+    if (square === selectedSquare) {
+      selectedSquare = null;
+      possibleMoves = [];
+      removeHighlights();
+      return;
+    }
+
+    if (possibleMoves.includes(square)) {
+      const move = game.move({
+        from: selectedSquare || "",
+        to: square,
+        promotion: "q",
+      });
+
+      if (move !== null) {
+        board.position(game.fen());
+        currentPlayer = currentPlayer === "white" ? "black" : "white";
+      }
+    }
+
+    selectedSquare = null;
+    possibleMoves = [];
+    removeHighlights();
+  }
+}
+
+function highlightMoves(squares) {
+  removeHighlights();
+  squares.forEach((sq) => {
+    $(`#board .square-${sq}`).css("background", "#ccc");
+  });
+}
+
+function removeHighlights() {
+  $("#board .square").css("background", "");
+}
+
+function startTimer() {
+  timerWhite = setInterval(() => {
+    if (currentPlayer === "white") {
+      timeWhite--;
+      updateTimer("timer1", timeWhite);
+      if (timeWhite <= 0) endGame("Player 2 thắng do hết giờ!");
+    }
+  }, 1000);
+
+  timerBlack = setInterval(() => {
+    if (currentPlayer === "black") {
+      timeBlack--;
+      updateTimer("timer2", timeBlack);
+      if (timeBlack <= 0) endGame("Player 1 thắng do hết giờ!");
+    }
+  }, 1000);
+}
+
+function updateTimer(id, seconds) {
+  const min = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const sec = String(seconds % 60).padStart(2, "0");
+  document.getElementById(id).textContent = `${min}:${sec}`;
+}
+
+function endGame(message) {
+  clearInterval(timerWhite);
+  clearInterval(timerBlack);
+  alert(message);
+}

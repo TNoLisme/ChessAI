@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chơi với AI Jinwoo</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="lib/chessboard-1.0.0.min.css" />
+    <style>
+      /* CSS bổ sung cho overlay và result */
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .form-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .form-container h2 {
+        margin-bottom: 20px;
+      }
+
+      .form-container input {
+        display: block;
+        margin: 10px auto;
+        padding: 10px;
+        width: 200px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      .form-container button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .form-container button:hover {
+        background-color: #45a049;
+      }
+
+      .result-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .result-box {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .result-box button {
+        margin: 10px;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .result-box button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Phần giao diện của người chơi bên trái -->
+    <div class="player player-left">
+      <img src="assets/default-avatar.jpg" class="avatar" />
+      <div class="name" id="playerName">Bạn (Trắng)</div>
+      <div class="timer" id="timerPlayer">20:00</div>
+    </div>
+
+    <!-- Bàn cờ sẽ được hiển thị tại đây -->
+    <div id="board" class="chess-board"></div>
+
+    <!-- Phần giao diện của AI bên phải -->
+    <div class="player player-right">
+      <img src="assets/AI_jinwoo.jpg" class="avatar" />
+      <div class="name">AI Jinwoo (Đen)</div>
+      <div class="timer" id="timerAI">20:00</div>
+    </div>
+
+    <!-- Form nhập tên người chơi -->
+    <div class="overlay" id="name-form">
+      <div class="form-container">
+        <h2>Nhập tên của bạn</h2>
+        <input type="text" id="playerInput" placeholder="Tên của bạn" />
+        <button onclick="startGame()">Bắt đầu</button>
+      </div>
+    </div>
+
+    <script src="lib/jquery-3.7.1.min.js"></script>
+    <script src="lib/chess.min.js"></script>
+    <script src="lib/chessboard-1.0.0.min.js"></script>
+    <script src="lib/stockfish-17.js"></script>
+    <script src="js/vs_ai.js"></script>
+  </body>
+</html>

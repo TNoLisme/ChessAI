@@ -1,0 +1,108 @@
+body {
+  margin: 0;
+  background-color: #f1f1f1;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  position: relative;
+}
+
+.chess-board {
+  width: 500px;
+  height: 500px;
+  margin: 0 40px;
+  z-index: 1;
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 150px;
+  z-index: 1;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.name {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.timer {
+  font-size: 20px;
+  color: #333;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.form-container {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.game-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#board {
+  display: none; /* ban đầu ẩn */
+}
+
+.player-left,
+.player-right {
+  display: none; /* ban đầu ẩn */
+}
+
+.result-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.result-box {
+  background: white;
+  padding: 30px 50px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.result-box h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.result-box button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
