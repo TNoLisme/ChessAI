@@ -1,15 +1,12 @@
 let board;
 let game = new Chess();
-let ai = new Worker("lib/stockfish-17.js"); // Sử dụng file cục bộ
-let playerColor = "w"; // Người chơi luôn là trắng
+let playerColor = "w";
 
-let timePlayer = 1200; // 20 phút
+let timePlayer = 1200;
 let timeAI = 1200;
 let timerPlayer, timerAI;
 
 function startGame() {
-  console.log("Đã bấm Bắt đầu!");
-
   const playerName = document.getElementById("playerInput").value || "Bạn";
   document.getElementById("playerName").textContent = `${playerName} (Trắng)`;
 
@@ -23,7 +20,7 @@ function startGame() {
     draggable: true,
     position: "start",
     onDrop: onDrop,
-    pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
+    pieceTheme: "img/chesspieces/wikipedia/{piece}.png", // Thêm / vào đầu
     orientation: "white",
   });
 
@@ -46,44 +43,45 @@ function onDrop(source, target) {
     return;
   }
 
-  // Đảm bảo AI chỉ di chuyển khi đến lượt của nó (màu đen)
   if (game.turn() === "b") {
-    setTimeout(makeAIMove, 250);
+    setTimeout(() => sendPositionToAI(game.history()), 250);
   }
 }
 
-function makeAIMove() {
-  if (game.game_over() || game.turn() !== "b") return;
+function sendPositionToAI(moveHistory) {
+  fetch("/get_ai_move", {
+    // Đường dẫn tương đối, đúng nếu chạy trên cùng origin
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fen: game.fen() }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.error) {
+        console.error("Lỗi từ server AI:", data.error);
+        return;
+      }
 
-  // Gửi lệnh để Stockfish tính toán nước đi
-  ai.postMessage("uci");
-  ai.postMessage("ucinewgame"); // Khởi tạo ván mới để tránh lỗi
-  ai.postMessage(`position fen ${game.fen()}`);
-  ai.postMessage("go depth 20"); // Tăng độ sâu để AI mạnh hơn (Elo > 2400)
+      const aiMove = data.move;
+      if (!aiMove) return;
 
-  // Lắng nghe phản hồi từ Stockfish
-  ai.onmessage = function (event) {
-    let message = event.data;
-    console.log("Stockfish response:", message); // Debug để kiểm tra phản hồi
-
-    if (message.startsWith("bestmove")) {
-      const move = message.split(" ")[1];
-      if (move === "(none)") return;
-
-      // Thực hiện nước đi của AI
-      game.move({
-        from: move.substring(0, 2),
-        to: move.substring(2, 4),
-        promotion: "q",
-      });
-
+      game.move(aiMove);
       board.position(game.fen());
 
       if (game.game_over()) {
         showResult(getGameResult());
       }
-    }
-  };
+    })
+    .catch((error) => {
+      console.error("Lỗi từ server AI:", error);
+    });
 }
 
 function getGameResult() {
@@ -108,12 +106,11 @@ function showResult(message) {
       <button onclick="goHome()">Quay lại trang chủ</button>
     </div>
   `;
-
   document.body.appendChild(resultContainer);
 }
 
 function goHome() {
-  window.location.href = "index.html";
+  window.location.href = "/";
 }
 
 function restartGame() {
@@ -163,7 +160,3 @@ function endGame(message) {
   clearInterval(timerAI);
   showResult(message);
 }
-
-// Khởi động Stockfish
-ai.postMessage("uci");
-ai.postMessage("isready");
