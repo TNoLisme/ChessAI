@@ -1,3 +1,4 @@
+
 let board;
 let game = new Chess();
 let playerColor = "w";
@@ -20,7 +21,10 @@ function startGame() {
     draggable: true,
     position: "start",
     onDrop: onDrop,
-    pieceTheme: "img/chesspieces/wikipedia/{piece}.png", // Thêm / vào đầu
+    onSquareClick: onSquareClick,
+    onMouseoverSquare: onMouseoverSquare,
+    onMouseoutSquare: onMouseoutSquare,
+    pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
     orientation: "white",
   });
 
@@ -28,12 +32,7 @@ function startGame() {
 }
 
 function onDrop(source, target) {
-  let move = game.move({
-    from: source,
-    to: target,
-    promotion: "q",
-  });
-
+  let move = game.move({ from: source, to: target, promotion: "q" });
   if (move === null) return "snapback";
 
   board.position(game.fen());
@@ -48,40 +47,57 @@ function onDrop(source, target) {
   }
 }
 
+function onMouseoverSquare(square, piece) {
+  // Chỉ hiển thị nước đi của quân đang được điều khiển
+  if ((game.turn() === 'w' && piece[0] !== 'w') ||
+      (game.turn() === 'b' && piece[0] !== 'b')) return;
+
+  const moves = game.moves({ square, verbose: true });
+  if (!moves.length) return;
+
+  const squaresToHighlight = moves.map(m => m.to);
+  squaresToHighlight.push(square);
+  highlightSquares(squaresToHighlight);
+}
+
+function onMouseoutSquare(/* square, piece */) {
+  removeHighlightSquares();
+}
+
+// Xóa hết chấm dot
+function removeHighlightSquares() {
+  document.querySelectorAll('#board .dot')
+    .forEach(el => el.classList.remove('dot'));
+}
+
+// Chèn chấm dot cho từng ô
+function highlightSquares(squares) {
+  squares.forEach(sq => {
+    const el = document.querySelector(`#board .square-${sq}`);
+    if (el) el.classList.add('dot');
+  });
+}
+
+
 function sendPositionToAI(moveHistory) {
   fetch("/get_ai_move", {
-    // Đường dẫn tương đối, đúng nếu chạy trên cùng origin
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fen: game.fen() }),
   })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       return response.json();
     })
-    .then((data) => {
-      if (data.error) {
-        console.error("Lỗi từ server AI:", data.error);
-        return;
-      }
-
+    .then(data => {
+      if (data.error) console.error("Lỗi từ server AI:", data.error);
       const aiMove = data.move;
       if (!aiMove) return;
-
       game.move(aiMove);
       board.position(game.fen());
-
-      if (game.game_over()) {
-        showResult(getGameResult());
-      }
+      if (game.game_over()) showResult(getGameResult());
     })
-    .catch((error) => {
-      console.error("Lỗi từ server AI:", error);
-    });
+    .catch(error => console.error("Lỗi từ server AI:", error));
 }
 
 function getGameResult() {
@@ -159,4 +175,22 @@ function endGame(message) {
   clearInterval(timerPlayer);
   clearInterval(timerAI);
   showResult(message);
+}
+function onSquareClick(square, piece) {
+  // chỉ highlight khi click đúng quân đang cầm (white/black)
+  if ((game.turn() === 'w' && (!piece || piece[0] !== 'w')) ||
+      (game.turn() === 'b' && (!piece || piece[0] !== 'b'))) {
+    removeHighlightSquares();
+    return;
+  }
+
+  const moves = game.moves({ square, verbose: true });
+  if (!moves.length) {
+    removeHighlightSquares();
+    return;
+  }
+
+  const squaresToHighlight = moves.map(m => m.to);
+  squaresToHighlight.push(square);
+  highlightSquares(squaresToHighlight);
 }

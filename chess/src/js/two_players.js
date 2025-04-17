@@ -27,6 +27,8 @@ function startGame() {
     draggable: true, // ✅ Cho phép kéo thả quân cờ
     position: "start",
     onDrop: onDrop, // ✅ Gắn sự kiện xử lý khi thả quân cờ
+    onMouseoverSquare: onMouseoverSquare,
+    onMouseoutSquare: onMouseoutSquare,
     pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
   });
 
@@ -141,4 +143,44 @@ function endGame(message) {
   clearInterval(timerWhite);
   clearInterval(timerBlack);
   alert(message);
+}
+// Khi hover vào ô có quân cờ đúng màu, dot vào nguồn + đích
+function onMouseoverSquare(square, piece) {
+  if (!piece) return;
+  // chỉ highlight đúng màu đang đi
+  if ((currentPlayer === "white" && piece[0] !== "w") ||
+      (currentPlayer === "black" && piece[0] !== "b")) {
+    return;
+  }
+  const moves = game.moves({ square, verbose: true });
+  if (!moves.length) return;
+  const squaresToHighlight = moves.map(m => m.to).concat(square);
+  highlightSquares(squaresToHighlight);
+}
+
+// Xóa dot khi rê chuột ra
+function onMouseoutSquare(/* square, piece */) {
+  removeHighlightSquares();
+}
+
+/* Thêm hai hàm để add/remove class .dot */
+function highlightSquares(squares) {
+  squares.forEach(sq => {
+    const el = document.querySelector(`#board .square-${sq}`);
+    if (el) el.classList.add("dot");
+  });
+}
+
+function removeHighlightSquares() {
+  document.querySelectorAll("#board .dot")
+    .forEach(el => el.classList.remove("dot"));
+}
+function onSquareClick(square, piece) {
+  removeHighlightSquares();
+  if (!piece) return;
+  if ((currentPlayer === "white" && piece[0] !== "w") ||
+      (currentPlayer === "black" && piece[0] !== "b")) return;
+  const moves = game.moves({ square, verbose: true });
+  if (!moves.length) return;
+  highlightSquares(moves.map(m => m.to));
 }

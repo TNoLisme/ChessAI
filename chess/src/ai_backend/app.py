@@ -5,7 +5,7 @@ import os
 
 # Đường dẫn đến thư mục gốc (C:\Users\thinh\HKII24-25\Trí tuệ nhân tạo\2425\chess)
 # app.py nằm trong src/ai_backend, nên cần đi lên 2 cấp để đến thư mục gốc
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # Khởi tạo Flask app, đặt static_folder là thư mục gốc để phục vụ file tĩnh
 app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
