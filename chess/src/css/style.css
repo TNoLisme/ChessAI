@@ -106,3 +106,24 @@ body {
   font-size: 16px;
   cursor: pointer;
 }
+/* highlight các ô nước đi */
+#board .highlight {
+  background-color: rgba(14, 14, 8, 0.5) !important;
+}
+/* đảm bảo các ô có thể chứa phần tử tuyệt đối */
+#board .square-55d63 {
+  position: relative;
+}
+
+/* class dot sẽ sinh ra 1 chấm đen ở giữa ô */
+#board .dot::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
