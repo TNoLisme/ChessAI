@@ -7,6 +7,47 @@ let timeWhite = 1200; // 20 phút
 let timeBlack = 1200;
 
 let timerWhite, timerBlack;
+let lastMove = null; // lưu nước đi vừa thực hiện
+let selectedSquare = null;
+
+
+// Cập nhật lịch sử nước đi
+function updateMoveHistory() {
+  const moveList = document.getElementById("moveList");
+  if (!moveList) return;
+  moveList.innerHTML = "";
+  const history = game.history();
+  for (let i = 0; i < history.length; i += 2) {
+    const whiteMove = history[i];
+    const blackMove = history[i + 1] || '';
+    const moveNumber = i / 2 + 1;
+    const li = document.createElement("li");
+    li.textContent = blackMove
+      ? `${moveNumber}. ${whiteMove} ${blackMove}`
+      : `${moveNumber}. ${whiteMove}`;
+    moveList.appendChild(li);
+  }
+}
+
+// Xóa highlight của nước đi trước
+function clearLastMoveHighlight() {
+  if (!lastMove) return;
+  [lastMove.from, lastMove.to].forEach(sq => {
+    const el = document.querySelector(`#board .square-${sq}`);
+    if (el) el.style.boxShadow = '';
+  });
+}
+
+// Đánh dấu ô nguồn và ô đích của nước đi cuối cùng
+function highlightLastMove(move) {
+  clearLastMoveHighlight();
+  ['from','to'].forEach(key => {
+    const sq = move[key];
+    const el = document.querySelector(`#board .square-${sq}`);
+    if (el) el.style.boxShadow = 'inset 0 0 10px 3px rgba(255,0,0,0.6)';
+  });
+  lastMove = move;
+}
 
 function startGame() {
   console.log("Đã bấm Bắt đầu!");
@@ -24,31 +65,33 @@ function startGame() {
   document.querySelector(".player-right").style.display = "flex";
 
   board = Chessboard("board", {
-    draggable: true, // ✅ Cho phép kéo thả quân cờ
+    draggable: true,
     position: "start",
-    onDrop: onDrop, // ✅ Gắn sự kiện xử lý khi thả quân cờ
+    onDrop: onDrop,
+    onSquareClick: onSquareClick,
     onMouseoverSquare: onMouseoverSquare,
     onMouseoutSquare: onMouseoutSquare,
     pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
   });
 
+  // Khởi tạo lịch sử nước đi và xóa highlight cũ
+  updateMoveHistory();
+  clearLastMoveHighlight();
+
   startTimer();
 }
 
 function onDrop(source, target) {
-  const move = game.move({
-    from: source,
-    to: target,
-    promotion: "q",
-  });
-
-  if (move === null) {
-    return "snapback";
-  }
+  const move = game.move({ from: source, to: target, promotion: "q" });
+  if (move === null) return "snapback";
 
   setTimeout(() => board.position(game.fen()), 100);
 
-  // ✅ Kiểm tra chiếu hết hoặc hòa
+  // Cập nhật lịch sử và đánh dấu nước đi vừa thực hiện
+  updateMoveHistory();
+  highlightLastMove(move);
+
+  // Kiểm tra chiếu hết hoặc hòa
   if (game.in_checkmate()) {
     const winner = currentPlayer === "white" ? "Black" : "White";
     showResult(`${winner} thắng bằng chiếu hết!`);
@@ -62,6 +105,36 @@ function onDrop(source, target) {
 
   // Chuyển lượt
   currentPlayer = currentPlayer === "white" ? "black" : "white";
+}
+
+function onMouseoverSquare(square, piece) {
+  if ((game.turn() === 'w' && piece[0] !== 'w') ||
+      (game.turn() === 'b' && piece[0] !== 'b')) return;
+
+  const moves = game.moves({ square, verbose: true });
+  if (!moves.length) return;
+
+  const squaresToHighlight = moves.map(m => m.to);
+  squaresToHighlight.push(square);
+  highlightSquares(squaresToHighlight);
+}
+
+function onMouseoutSquare() {
+  removeHighlightSquares();
+}
+
+// Xóa hết chấm dot
+function removeHighlightSquares() {
+  document.querySelectorAll('#board .dot')
+    .forEach(el => el.classList.remove('dot'));
+}
+
+// Chèn chấm dot cho từng ô
+function highlightSquares(squares) {
+  squares.forEach(sq => {
+    const el = document.querySelector(`#board .square-${sq}`);
+    if (el) el.classList.add('dot');
+  });
 }
 
 function showResult(message) {
@@ -82,34 +155,31 @@ function showResult(message) {
 }
 
 function goHome() {
-  window.location.href = "index.html"; // hoặc đường dẫn trang chủ của bạn
+  window.location.href = "index.html";
 }
 
 function restartGame() {
-  // Xóa container kết quả nếu có
   const resultContainer = document.querySelector(".result-container");
   if (resultContainer) resultContainer.remove();
 
-  // Đảo vai người chơi
-  currentPlayer = "white"; // reset lượt đầu tiên
-
-  // Đảo màu: nếu board hiện đang trắng bên dưới → lật
-  const currentOrientation = board.orientation(); // "white" hoặc "black"
-  const newOrientation = currentOrientation === "white" ? "black" : "white";
-  board.orientation(newOrientation);
-
-  // Reset trò chơi
+  // Reset dữ liệu
+  currentPlayer = "white";
   game.reset();
   board.position("start");
 
-  // Đổi thời gian
-  timeWhite = 1200;
-  timeBlack = 1200;
+  // Đổi orientation
+  const currOrient = board.orientation();
+  board.orientation(currOrient === "white" ? "black" : "white");
 
+  // Reset lịch sử và highlight
+  updateMoveHistory();
+  clearLastMoveHighlight();
+
+  // Reset thời gian
+  timeWhite = 1200; timeBlack = 1200;
   updateTimer("timer1", timeWhite);
   updateTimer("timer2", timeBlack);
 
-  // Reset timer
   clearInterval(timerWhite);
   clearInterval(timerBlack);
   startTimer();
@@ -144,43 +214,49 @@ function endGame(message) {
   clearInterval(timerBlack);
   alert(message);
 }
-// Khi hover vào ô có quân cờ đúng màu, dot vào nguồn + đích
-function onMouseoverSquare(square, piece) {
-  if (!piece) return;
-  // chỉ highlight đúng màu đang đi
-  if ((currentPlayer === "white" && piece[0] !== "w") ||
-      (currentPlayer === "black" && piece[0] !== "b")) {
-    return;
-  }
-  const moves = game.moves({ square, verbose: true });
-  if (!moves.length) return;
-  const squaresToHighlight = moves.map(m => m.to).concat(square);
-  highlightSquares(squaresToHighlight);
-}
-
-// Xóa dot khi rê chuột ra
-function onMouseoutSquare(/* square, piece */) {
-  removeHighlightSquares();
-}
 
 /* Thêm hai hàm để add/remove class .dot */
 function highlightSquares(squares) {
   squares.forEach(sq => {
-    const el = document.querySelector(`#board .square-${sq}`);
-    if (el) el.classList.add("dot");
+    let sqEl = document.querySelector(`#board .square-${sq}`);
+    if (!sqEl) return;
+    const d = document.createElement("div");
+    d.className = "dot";
+    sqEl.appendChild(d);
   });
 }
 
 function removeHighlightSquares() {
-  document.querySelectorAll("#board .dot")
-    .forEach(el => el.classList.remove("dot"));
+  document.querySelectorAll("#board .dot").forEach(d => d.remove());
 }
+
 function onSquareClick(square, piece) {
   removeHighlightSquares();
+
   if (!piece) return;
   if ((currentPlayer === "white" && piece[0] !== "w") ||
       (currentPlayer === "black" && piece[0] !== "b")) return;
+
   const moves = game.moves({ square, verbose: true });
   if (!moves.length) return;
-  highlightSquares(moves.map(m => m.to));
+
+  const squaresToHighlight = moves.map(m => m.to);
+  squaresToHighlight.push(square);
+  highlightSquares(squaresToHighlight);
+}
+
+function greySquare(square) {
+  const squareEl = $('#board .square-' + square);
+  let background = '#a9a9a9';
+  if (squareEl.hasClass('black-3c85d')) background = '#696969';
+  squareEl.css('background', background);
+}
+
+function highlightSquares(destSquares, sourceSquare) {
+  greySquare(sourceSquare);
+  destSquares.forEach(sq => greySquare(sq));
+}
+
+function removeHighlightSquares() {
+  $('#board .square-55d63').css('background', '');
 }
