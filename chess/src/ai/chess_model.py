@@ -8,13 +8,14 @@ class ChessModel:
     """
     Class định nghĩa kiến trúc mô hình học máy cho AI cờ vua, dự đoán nước đi tiếp theo và giá trị vị trí.
     """
-    
+
     def __init__(self, config: Dict = None):
         """
-        Khởi tạo mô hình với các tham số cấu hình.
+        Khởi tạo đối tượng ChessModel với các tham số cấu hình mạng nơ-ron.
 
         Args:
-            config (Dict, optional): Dictionary chứa các tham số cấu hình. Nếu None, sử dụng mặc định.
+            config (Dict, optional): Dictionary chứa các tham số cấu hình mô hình.
+                Nếu không truyền vào, sẽ dùng cấu hình mặc định gồm số bộ lọc, số lớp residual, dropout,...
         """
         default_config = {
             'filters_conv': 64,

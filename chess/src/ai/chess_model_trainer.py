@@ -2,8 +2,8 @@ import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from typing import Dict, Tuple, List, Optional
+import psutil
+from typing import Dict, Tuple, List, Optional, Iterator
 
 from chess_data_loader import ChessDataLoader
 from chess_data_preprocessor import ChessDataPreprocessor
@@ -14,165 +14,191 @@ class ChessModelTrainer:
     Class quản lý huấn luyện và đánh giá mô hình AI cờ vua.
     """
     
-    def __init__(self, data_folder: str = "data", model_save_dir: str = "models", history_length: int = 8):
+    def __init__(self, train_folder: str = "data/train", val_folder: str = "data/val", 
+                 test_folder: str = "data/test", model_save_dir: str = "models", history_length: int = 8):
         """
-        Khởi tạo trainer.
-
-        Args:
-            data_folder (str): Thư mục chứa dữ liệu .npy.
-            model_save_dir (str): Thư mục lưu mô hình.
-            history_length (int): Độ dài lịch sử nước đi.
+        Khởi tạo trainer với các thư mục dữ liệu và tham số.
         """
-        self.data_folder = data_folder
+        self.train_folder = train_folder
+        self.val_folder = val_folder
+        self.test_folder = test_folder
         self.model_save_dir = model_save_dir
         self.history_length = history_length
-        # os.makedirs(model_save_dir, exist_ok=True)
-        self.data_loader = ChessDataLoader(data_folder=data_folder)
-        self.preprocessor = ChessDataPreprocessor(history_length=history_length)
-
-    def prepare_datasets(self, batch_size: int = 32, val_split: float = 0.1, test_split: float = 0.1, 
-                         shuffle: bool = True) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
-        """
-        Chuẩn bị các dataset cho huấn luyện, kiểm định, và kiểm tra.
-
-        Args:
-            batch_size (int): Kích thước batch.
-            val_split (float): Tỷ lệ dữ liệu kiểm định.
-            test_split (float): Tỷ lệ dữ liệu kiểm tra.
-            shuffle (bool): Có xáo trộn dữ liệu hay không.
-
-        Returns:
-            Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: Dataset huấn luyện, kiểm định, và kiểm tra.
-        """
-        print("🔄 Loading data...")
-        X_raw, y_raw = [], []
-        data_generator = self.data_loader.load_data_generator(batch_size=1000, shuffle=True)
-        for X_batch, y_batch in data_generator:
-            X_raw.extend(X_batch.tolist())
-            y_raw.extend(y_batch.tolist())
-        print(f"✅ Loaded {len(X_raw)} data samples")
-
-        # Thêm giá trị value giả (0.5) vì dữ liệu hiện tại không có nhãn value
-        # Trong thực tế, cần tạo nhãn value (ví dụ: 1 nếu thắng, 0 nếu hòa, -1 nếu thua)
-        y_raw_with_value = [(y[0], y[1], y[2], 0.5) for y in y_raw]
-
-        X_train_val, X_test, y_train_val, y_test = train_test_split(
-            X_raw, y_raw_with_value, test_size=test_split, random_state=42
+        self.data_loader = ChessDataLoader(
+            train_folder=train_folder,
+            val_folder=val_folder,
+            test_folder=test_folder
         )
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val, y_train_val, test_size=val_split/(1-test_split), random_state=42
+        self.preprocessor = ChessDataPreprocessor(history_length=self.history_length)
+
+    def prepare_train_dataset(self, batch_size: int = 16, shuffle: bool = True) -> Tuple[tf.data.Dataset, int]:
+        """
+        Chuẩn bị dataset huấn luyện từ dữ liệu gốc:
+        - Tạo generator từ data loader
+        - Tính số mẫu và bước lặp mỗi epoch
+        - Chuyển sang tf.data.Dataset qua preprocessor
+        """
+        print("🔄 Creating train data generator...")
+        train_generator = self.data_loader.load_data_generator(
+            batch_size=1000, shuffle=shuffle, dataset_type="train"
         )
-        print(f"📊 Data split: Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
+        
+        # Ước lượng số mẫu
+        total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("train")
+                           for data in [np.load(os.path.join(self.train_folder, file), allow_pickle=True).item()])
+        steps_per_epoch = (total_samples + batch_size - 1) // batch_size
+        print(f"📊 Train dataset: {total_samples} samples, {steps_per_epoch} steps per epoch")
 
-        print("🔄 Preprocessing and creating datasets...")
-        train_ds = self.preprocessor.create_tensorflow_dataset(X_train, y_train, batch_size, shuffle)
-        val_ds = self.preprocessor.create_tensorflow_dataset(X_val, y_val, batch_size, shuffle=False)
-        test_ds = self.preprocessor.create_tensorflow_dataset(X_test, y_test, batch_size, shuffle=False)
-        print("✅ Datasets created")
-        return train_ds, val_ds, test_ds
+        train_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
+            train_generator, batch_size, shuffle=shuffle
+        )
+        print("✅ Train dataset created")
+        return train_ds, steps_per_epoch
 
-    def train_model(self, model: Optional[ChessModel] = None, epochs: int = 100, batch_size: int = 32) -> ChessModel:
+    def prepare_validation_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
         """
-        Huấn luyện mô hình AI cờ vua.
-
-        Args:
-            model (Optional[ChessModel]): Mô hình cần huấn luyện (tạo mới nếu None).
-            epochs (int): Số epoch huấn luyện.
-            batch_size (int): Kích thước batch.
-
-        Returns:
-            ChessModel: Mô hình đã huấn luyện.
+        Chuẩn bị dataset validation:
+        - Load dữ liệu validation
+        - Ước lượng số bước kiểm tra
+        - Trả về tf.data.Dataset
         """
-        train_ds, val_ds, _ = self.prepare_datasets(batch_size=batch_size)
+        print("🔄 Creating validation data generator...")
+        val_generator = self.data_loader.load_data_generator(
+            batch_size=1000, shuffle=shuffle, dataset_type="val"
+        )
+        
+        # Ước lượng số mẫu
+        total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("val")
+                           for data in [np.load(os.path.join(self.val_folder, file), allow_pickle=True).item()])
+        validation_steps = (total_samples + batch_size - 1) // batch_size if total_samples > 0 else 1
+        print(f"📊 Validation dataset: {total_samples} samples, {validation_steps} validation steps")
+
+        val_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
+            val_generator, batch_size, shuffle=shuffle
+        ).cache()
+        print("✅ Validation dataset created")
+        return val_ds, validation_steps
+
+    def prepare_test_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
+        """
+        Chuẩn bị dataset test:
+        - Load dữ liệu test
+        - Ước lượng số bước kiểm tra
+        - Trả về tf.data.Dataset
+        """
+        print("🔄 Creating test data generator...")
+        test_generator = self.data_loader.load_data_generator(
+            batch_size=1000, shuffle=shuffle, dataset_type="test"
+        )
+        
+        # Ước lượng số mẫu
+        total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("test")
+                           for data in [np.load(os.path.join(self.test_folder, file), allow_pickle=True).item()])
+        test_steps = (total_samples + batch_size - 1) // batch_size if total_samples > 0 else 1
+        print(f"📊 Test dataset: {total_samples} samples, {test_steps} test steps")
+
+        test_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
+            test_generator, batch_size, shuffle=shuffle
+        ).cache()
+        print("✅ Test dataset created")
+        return test_ds, test_steps
+
+    def train_model(self, model: Optional[ChessModel] = None, epochs: int = 100, batch_size: int = 16) -> ChessModel:
+        """
+        Huấn luyện mô hình:
+        - Chuẩn bị dữ liệu train/val
+        - Thiết lập callback
+        - Theo dõi sử dụng RAM
+        - Huấn luyện và lưu mô hình tốt nhất và cuối cùng
+        - Đánh giá lại trên tập validation và test
+        """
         os.makedirs(self.model_save_dir, exist_ok=True)
         
         print("🔄 Initializing new model...")
-        model = ChessModel()
+        model = ChessModel() if model is None else model
         print("✅ Model initialized")
 
+        # Chuẩn bị dataset huấn luyện và validation
+        train_ds, steps_per_epoch = self.prepare_train_dataset(batch_size=batch_size, shuffle=True)
+        val_ds, validation_steps = self.prepare_validation_dataset(batch_size=batch_size, shuffle=False)
+        
+        # Callback cho huấn luyện
         callbacks = [
             tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6, verbose=1),
             tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True, verbose=1),
             tf.keras.callbacks.ModelCheckpoint(
-                filepath=os.path.join(self.model_save_dir, 'chess_model_best.h5'),
-                monitor='val_loss', save_best_only=True, verbose=1
+                filepath=os.path.join(self.model_save_dir, 'chess_model_best.keras'),
+                monitor='val_loss', save_best_only=True, save_weights_only=False, verbose=1
             )
         ]
 
-        print(f"🏋️ Starting training with {epochs} epochs...")
-        history = model.train(train_ds, val_ds, epochs, callbacks)
+        print(f"🏋️ Starting training with {epochs} epochs, {steps_per_epoch} steps per epoch, {validation_steps} validation steps...")
+        mem_info = psutil.virtual_memory()
+        print(f"RAM usage before training: {mem_info.percent}% ({mem_info.used/1024**3:.2f}GB / {mem_info.total/1024**3:.2f}GB)")
+        
+        history = model.train(
+            train_dataset=train_ds,
+            validation_dataset=val_ds,
+            epochs=epochs,
+            callbacks=callbacks,
+            steps_per_epoch=steps_per_epoch,
+            validation_steps=validation_steps
+        )
         print("✅ Training completed")
 
-        final_model_path = os.path.join(self.model_save_dir, 'chess_model_final.h5')
+        mem_info = psutil.virtual_memory()
+        print(f"RAM usage after training: {mem_info.percent}% ({mem_info.used/1024**3:.2f}GB / {mem_info.total/1024**3:.2f}GB)")
+
+        final_model_path = os.path.join(self.model_save_dir, 'chess_model_final.keras')
         model.save(final_model_path)
         print(f"💾 Saved final model at: {final_model_path}")
 
-        self._plot_training_history(history)
+        # Đánh giá trên tập validation
+        print("🔍 Validating model...")
+        val_metrics = self.validate_model(model, batch_size=batch_size)
+        print("✅ Validation completed. Metrics:")
+        for name, value in val_metrics.items():
+            print(f"  {name}: {value:.4f}")
+
+        # Đánh giá trên tập test
+        print("🔍 Testing model...")
+        test_metrics = self.test_model(model, batch_size=batch_size)
+        print("✅ Test completed. Metrics:")
+        for name, value in test_metrics.items():
+            print(f"  {name}: {value:.4f}")
+
         return model
-       
-    def _plot_training_history(self, history: Dict) -> None:
+
+    def validate_model(self, model: Optional[ChessModel] = None, batch_size: int = 16) -> Dict:
         """
-        Vẽ và lưu biểu đồ lịch sử huấn luyện.
-
-        Args:
-            history (Dict): Dictionary chứa lịch sử huấn luyện.
-        """
-        plt.figure(figsize=(15, 10))
-        plt.subplot(2, 2, 1)
-        plt.plot(history['loss'], label='Train Loss')
-        plt.plot(history['val_loss'], label='Val Loss')
-        plt.title('Loss During Training')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-
-        plt.subplot(2, 2, 2)
-        plt.plot(history['from_square_accuracy'], label='Train From Acc')
-        plt.plot(history['val_from_square_accuracy'], label='Val From Acc')
-        plt.title('From Square Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend()
-
-        plt.subplot(2, 2, 3)
-        plt.plot(history['to_square_accuracy'], label='Train To Acc')
-        plt.plot(history['val_to_square_accuracy'], label='Val To Acc')
-        plt.title('To Square Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend()
-
-        plt.subplot(2, 2, 4)
-        plt.plot(history['value_mae'], label='Train Value MAE')
-        plt.plot(history['val_value_mae'], label='Val Value MAE')
-        plt.title('Value MAE')
-        plt.xlabel('Epoch')
-        plt.ylabel('MAE')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.model_save_dir, 'training_history.png'))
-        print("📊 Saved training history plot")
-
-    def evaluate_model(self, model: Optional[ChessModel] = None) -> Dict:
-        """
-        Đánh giá hiệu suất mô hình trên tập kiểm tra.
-
-        Args:
-            model (Optional[ChessModel]): Mô hình cần đánh giá (tải từ file nếu None).
-
-        Returns:
-            Dict: Dictionary chứa các metric đánh giá.
+        Đánh giá mô hình trên tập validation:
+        - Load model nếu chưa được truyền vào
+        - Gọi evaluate trên tập validation
         """
         if model is None:
-            best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.h5')
+            best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')
             model = ChessModel.load(best_model_path)
             print(f"✅ Loaded model from: {best_model_path}")
 
-        _, _, test_ds = self.prepare_datasets()
-        print("🔍 Evaluating model...")
-        metrics = model.model.evaluate(test_ds, verbose=1)
+        val_ds, validation_steps = self.prepare_validation_dataset(batch_size=batch_size)
+        print("🔍 Evaluating on validation dataset...")
+        metrics = model.model.evaluate(val_ds, steps=validation_steps, verbose=1)
         result = {name: value for name, value in zip(model.model.metrics_names, metrics)}
-        for name, value in result.items():
-            print(f"📈 {name}: {value:.4f}")
+        return result
+
+    def test_model(self, model: Optional[ChessModel] = None, batch_size: int = 16) -> Dict:
+        """
+        Đánh giá mô hình trên tập test:
+        - Load model nếu chưa được truyền vào
+        - Gọi evaluate trên tập test
+        """
+        if model is None:
+            best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')
+            model = ChessModel.load(best_model_path)
+            print(f"✅ Loaded model from: {best_model_path}")
+
+        test_ds, test_steps = self.prepare_test_dataset(batch_size=batch_size)
+        print("🔍 Evaluating on test dataset...")
+        metrics = model.model.evaluate(test_ds, steps=test_steps, verbose=1)
+        result = {name: value for name, value in zip(model.model.metrics_names, metrics)}
         return result
