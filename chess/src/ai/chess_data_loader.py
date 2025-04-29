@@ -1,76 +1,103 @@
-
-import numpy as np
 import os
-from typing import List, Tuple, Dict, Optional, Iterator
+import numpy as np
+from typing import List, Tuple, Iterator
 
 class ChessDataLoader:
     """
-    Class tải dữ liệu cờ vua từ các file .npy đã được xử lý.
+    Class quản lý việc load dữ liệu từ các file .npy trong các thư mục train, val, test.
     """
-    
-    def __init__(self, data_folder: str = "data"):
-        """
-        Khởi tạo bộ tải dữ liệu.
-        Args:
-            data_folder (str): Thư mục chứa các file .npy.
-        """
-        self.data_folder = data_folder
 
-    def list_data_files(self) -> List[str]:
+    def __init__(self, train_folder: str = "data/train", val_folder: str = "data/val", test_folder: str = "data/test"):
         """
-        Liệt kê tất cả các file .npy trong thư mục dữ liệu.
-        Returns:
-            List[str]: Danh sách tên các file .npy.
-        """
-        return [f for f in os.listdir(self.data_folder) 
-                if f.endswith('.npy') and f.startswith('chess_data_')]
+        Khởi tạo loader với các thư mục train, val, test.
 
-    def load_data_file(self, filename: str) -> Tuple[List[Dict], List[Tuple[int, int, Optional[int]]]]:
-        """
-        Tải dữ liệu từ một file .npy.
         Args:
-            filename (str): Tên file (không bao gồm đường dẫn).
-        Returns:
-            Tuple[List[Dict], List[Tuple[int, int, Optional[int]]]]: Dữ liệu đầu vào (X) và đầu ra (y).
+            train_folder (str): Đường dẫn đến thư mục chứa file .npy cho tập train.
+            val_folder (str): Đường dẫn đến thư mục chứa file .npy cho tập validation.
+            test_folder (str): Đường dẫn đến thư mục chứa file .npy cho tập test.
         """
-        full_path = os.path.join(self.data_folder, filename)
-        data = np.load(full_path, allow_pickle=True).item()
-        return data["X"], data["y"]
+        self.train_folder = train_folder
+        self.val_folder = val_folder
+        self.test_folder = test_folder
 
-    def load_all_data(self) -> Tuple[List[Dict], List[Tuple[int, int, Optional[int]]]]:
+    def list_data_files(self, dataset_type: str = "train") -> List[str]:
         """
-        Tải toàn bộ dữ liệu từ tất cả các file .npy.
-        Returns:
-            Tuple[List[Dict], List[Tuple[int, int, Optional[int]]]]: Toàn bộ dữ liệu đầu vào và đầu ra.
-        """
-        all_X, all_y = [], []
-        for file in self.list_data_files():
-            X, y = self.load_data_file(file)
-            all_X.extend(X)
-            all_y.extend(y)
-        return all_X, all_y
-    
-    def load_data_generator(self, batch_size: int = 32, shuffle: bool = True) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
-        """
-        Tạo generator để tải dữ liệu theo batch, tiết kiệm bộ nhớ.
+        Lấy danh sách các file .npy trong thư mục tương ứng.
+
         Args:
-            batch_size (int): Kích thước mỗi batch.
-            shuffle (bool): Có xáo trộn dữ liệu hay không.
+            dataset_type (str): Loại dataset ('train', 'val', 'test').
+
+        Returns:
+            List[str]: Danh sách tên file .npy.
+        """
+        # Chọn thư mục tương ứng theo loại dataset
+        folder = self.train_folder if dataset_type == "train" else self.val_folder if dataset_type == "val" else self.test_folder
+        
+        # Nếu thư mục không tồn tại, raise lỗi
+        if not os.path.exists(folder):
+            raise FileNotFoundError(f"Folder {folder} not found")
+        
+        # Lấy tất cả file có đuôi .npy
+        files = [f for f in os.listdir(folder) if f.endswith('.npy')]
+        
+        # Nếu không có file .npy nào, raise lỗi
+        if not files:
+            raise FileNotFoundError(f"No .npy files found in {folder}")
+        
+        # Trả về danh sách file đã sort
+        return sorted(files)
+
+    def load_data_generator(self, batch_size: int = 1000, shuffle: bool = True, dataset_type: str = "train") -> Iterator[Tuple[List, List]]:
+        """
+        Tạo generator để load dữ liệu từ file .npy theo batch.
+
+        Args:
+            batch_size (int): Kích thước batch.
+            shuffle (bool): Có xáo trộn dữ liệu không.
+            dataset_type (str): Loại dataset ('train', 'val', 'test').
+
         Yields:
-            Iterator[Tuple[np.ndarray, np.ndarray]]: Batch dữ liệu đầu vào (X) và đầu ra (y).
+            Tuple[List, List]: (X_batch, y_batch) với X_batch và y_batch là danh sách dữ liệu.
         """
-        file_list = self.list_data_files()
+        # Lấy danh sách file .npy cần load
+        files = self.list_data_files(dataset_type)
+        
+        # Chọn thư mục tương ứng theo loại dataset
+        folder = self.train_folder if dataset_type == "train" else self.val_folder if dataset_type == "val" else self.test_folder
+        
+        # Nếu yêu cầu shuffle file
         if shuffle:
-            np.random.shuffle(file_list)
-
-        for file in file_list:
-            X, y = self.load_data_file(file)
-            indices = np.arange(len(X))
-            if shuffle:
-                np.random.shuffle(indices)
-
-            for i in range(0, len(indices), batch_size):
-                batch_indices = indices[i:i + batch_size]
-                X_batch = np.array([X[j] for j in batch_indices])
-                y_batch = np.array([y[j] for j in batch_indices])
-                yield X_batch, y_batch
+            np.random.shuffle(files)
+        
+        # Duyệt từng file
+        for file in files:
+            file_path = os.path.join(folder, file)
+            try:
+                # Load file .npy
+                data = np.load(file_path, allow_pickle=True).item()
+                X, y = data.get('X', []), data.get('y', [])
+                
+                # Nếu file trống thì bỏ qua
+                if not X or not y:
+                    print(f"Warning: Empty data in {file_path}, skipping...")
+                    continue
+                
+                # Tạo danh sách chỉ số
+                indices = np.arange(len(X))
+                
+                # Nếu yêu cầu shuffle trong file
+                if shuffle:
+                    np.random.shuffle(indices)
+                
+                # Chia dữ liệu thành các batch
+                for start_idx in range(0, len(X), batch_size):
+                    batch_indices = indices[start_idx:start_idx + batch_size]
+                    X_batch = [X[i] for i in batch_indices]
+                    y_batch = [y[i] for i in batch_indices]
+                    
+                    # Trả về batch
+                    yield X_batch, y_batch
+            except Exception as e:
+                # Nếu lỗi khi load file, in lỗi và bỏ qua
+                print(f"Error loading {file_path}: {e}")
+                continue
