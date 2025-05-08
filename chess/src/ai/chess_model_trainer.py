@@ -33,10 +33,10 @@ class ChessModelTrainer:
 
     def prepare_train_dataset(self, batch_size: int = 16, shuffle: bool = True) -> Tuple[tf.data.Dataset, int]:
         """
-        Chuẩn bị dataset huấn luyện từ dữ liệu gốc:
-        - Tạo generator từ data loader
-        - Tính số mẫu và bước lặp mỗi epoch
-        - Chuyển sang tf.data.Dataset qua preprocessor
+        Chuẩn bị dataset cho tập huấn luyện.
+        
+        Returns:
+            Tuple[tf.data.Dataset, int]: Dataset và số steps per epoch.
         """
         print("🔄 Creating train data generator...")
         train_generator = self.data_loader.load_data_generator(
@@ -57,10 +57,10 @@ class ChessModelTrainer:
 
     def prepare_validation_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
         """
-        Chuẩn bị dataset validation:
-        - Load dữ liệu validation
-        - Ước lượng số bước kiểm tra
-        - Trả về tf.data.Dataset
+        Chuẩn bị dataset cho tập validation.
+        
+        Returns:
+            Tuple[tf.data.Dataset, int]: Dataset và số validation steps.
         """
         print("🔄 Creating validation data generator...")
         val_generator = self.data_loader.load_data_generator(
@@ -81,10 +81,10 @@ class ChessModelTrainer:
 
     def prepare_test_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
         """
-        Chuẩn bị dataset test:
-        - Load dữ liệu test
-        - Ước lượng số bước kiểm tra
-        - Trả về tf.data.Dataset
+        Chuẩn bị dataset cho tập test.
+        
+        Returns:
+            Tuple[tf.data.Dataset, int]: Dataset và số test steps.
         """
         print("🔄 Creating test data generator...")
         test_generator = self.data_loader.load_data_generator(
@@ -105,12 +105,7 @@ class ChessModelTrainer:
 
     def train_model(self, model: Optional[ChessModel] = None, epochs: int = 100, batch_size: int = 16) -> ChessModel:
         """
-        Huấn luyện mô hình:
-        - Chuẩn bị dữ liệu train/val
-        - Thiết lập callback
-        - Theo dõi sử dụng RAM
-        - Huấn luyện và lưu mô hình tốt nhất và cuối cùng
-        - Đánh giá lại trên tập validation và test
+        Huấn luyện mô hình AI cờ vua, sau đó đánh giá trên tập validation và test.
         """
         os.makedirs(self.model_save_dir, exist_ok=True)
         
@@ -171,9 +166,7 @@ class ChessModelTrainer:
 
     def validate_model(self, model: Optional[ChessModel] = None, batch_size: int = 16) -> Dict:
         """
-        Đánh giá mô hình trên tập validation:
-        - Load model nếu chưa được truyền vào
-        - Gọi evaluate trên tập validation
+        Đánh giá mô hình trên tập validation.
         """
         if model is None:
             best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')
@@ -188,9 +181,7 @@ class ChessModelTrainer:
 
     def test_model(self, model: Optional[ChessModel] = None, batch_size: int = 16) -> Dict:
         """
-        Đánh giá mô hình trên tập test:
-        - Load model nếu chưa được truyền vào
-        - Gọi evaluate trên tập test
+        Đánh giá mô hình trên tập test.
         """
         if model is None:
             best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')

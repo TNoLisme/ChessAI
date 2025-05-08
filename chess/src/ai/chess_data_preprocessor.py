@@ -7,13 +7,10 @@ class ChessDataPreprocessor:
     """
     Class tiền xử lý dữ liệu cờ vua để chuẩn bị cho mô hình học máy.
     """
-
+    
     def __init__(self, history_length: int = 8):
         """
         Khởi tạo bộ tiền xử lý dữ liệu.
-
-        Args:
-            history_length (int): Độ dài lịch sử các nước đi được lưu giữ.
         """
         self.history_length = 8
         self.num_squares = 64
@@ -21,20 +18,9 @@ class ChessDataPreprocessor:
     def preprocess_input(self, X_raw: List[Dict]) -> Dict[str, np.ndarray]:
         """
         Tiền xử lý dữ liệu đầu vào thành các mảng numpy.
-
-        Args:
-            X_raw (List[Dict]): Danh sách các ván cờ ở dạng dictionary.
-
-        Returns:
-            Dict[str, np.ndarray]: Dictionary chứa các đặc trưng đầu vào đã được chuẩn hóa.
-
-        Raises:
-            ValueError: Nếu dữ liệu đầu vào rỗng hoặc thiếu key bắt buộc.
         """
         if len(X_raw) == 0:
             raise ValueError("Input data is empty")
-
-        # Danh sách các key bắt buộc phải có trong mỗi phần tử
         required_keys = ["board", "side_to_move", "castling_rights", "history", "move_count", "game_phase"]
         for i, data_point in enumerate(X_raw):
             if not isinstance(data_point, dict):
@@ -43,8 +29,6 @@ class ChessDataPreprocessor:
                 raise ValueError(f"Missing required keys in data point {i}: {data_point}")
 
         n_samples = len(X_raw)
-
-        # Tạo các mảng numpy để lưu dữ liệu
         boards = np.zeros((n_samples, 8, 8, 12), dtype=np.float32)
         side_to_moves = np.zeros((n_samples, 1), dtype=np.float32)
         castling_rights = np.zeros((n_samples, 4), dtype=np.float32)
@@ -53,9 +37,6 @@ class ChessDataPreprocessor:
         game_phases = np.zeros((n_samples, 3), dtype=np.float32)
 
         def square_to_index(square):
-            """
-            Chuyển đổi ký hiệu ô cờ (VD: 'e4') thành chỉ số (0-63).
-            """
             if isinstance(square, (int, float)):
                 return int(square)
             if not isinstance(square, str) or len(square) != 2:
@@ -70,12 +51,8 @@ class ChessDataPreprocessor:
             boards[i] = data_point["board"]
             side_to_moves[i, 0] = data_point["side_to_move"]
             castling_rights[i] = data_point["castling_rights"]
-
-            # Cắt hoặc thêm lịch sử nước đi để đúng độ dài yêu cầu
             history = data_point["history"][-self.history_length:] if len(data_point["history"]) > self.history_length else data_point["history"]
             history_padded = [None] * (self.history_length - len(history)) + history
-
-            # Chuyển mỗi nước đi thành vector 4 chiều
             for j, move in enumerate(history_padded):
                 if move is not None and len(move) >= 2:
                     from_idx = square_to_index(move[0])
@@ -87,7 +64,6 @@ class ChessDataPreprocessor:
                         histories[i, j, 1] = to_idx / self.num_squares
                         histories[i, j, 2] = captured / 12 if captured >= 0 else 0
                         histories[i, j, 3] = special
-
             move_counts[i, 0] = data_point["move_count"] / 200
             game_phases[i] = data_point["game_phase"]
 
@@ -102,20 +78,10 @@ class ChessDataPreprocessor:
 
     def preprocess_output(self, y_raw: List[Tuple[int, int, int]]) -> Dict[str, np.ndarray]:
         """
-        Tiền xử lý dữ liệu đầu ra thành dạng one-hot encoding.
-
-        Args:
-            y_raw (List[Tuple[int, int, int]]): Danh sách nhãn (from_square, to_square, is_promotion).
-
-        Returns:
-            Dict[str, np.ndarray]: Dictionary chứa nhãn ở dạng tensor.
-
-        Raises:
-            ValueError: Nếu dữ liệu đầu ra rỗng.
+        Tiền xử lý dữ liệu đầu ra thành one-hot encoding.
         """
         if len(y_raw) == 0:
             raise ValueError("Output data is empty")
-
         n_samples = len(y_raw)
         from_squares = np.zeros((n_samples, self.num_squares), dtype=np.float32)
         to_squares = np.zeros((n_samples, self.num_squares), dtype=np.float32)
@@ -136,16 +102,6 @@ class ChessDataPreprocessor:
                                   batch_size: int = 32, shuffle: bool = True, buffer_size: int = 10000) -> tf.data.Dataset:
         """
         Tạo TensorFlow dataset từ dữ liệu thô.
-
-        Args:
-            X_raw (List[Dict]): Dữ liệu đầu vào thô.
-            y_raw (List[Tuple[int, int, int]]): Nhãn đầu ra thô.
-            batch_size (int): Kích thước mỗi batch.
-            shuffle (bool): Có xáo trộn dữ liệu hay không.
-            buffer_size (int): Bộ đệm cho shuffle.
-
-        Returns:
-            tf.data.Dataset: Dataset huấn luyện.
         """
         X_processed = self.preprocess_input(X_raw)
         y_processed = self.preprocess_output(y_raw)
@@ -159,22 +115,10 @@ class ChessDataPreprocessor:
     def create_tensorflow_dataset_from_generator(self, data_generator: Iterator[Tuple[List[Dict], List[Tuple[int, int, int]]]], 
                                                 batch_size: int = 32, shuffle: bool = True) -> tf.data.Dataset:
         """
-        Tạo TensorFlow dataset từ generator (dành cho dữ liệu lớn hoặc streaming).
-
-        Args:
-            data_generator (Iterator): Generator sinh ra các batch (X_batch, y_batch).
-            batch_size (int): Kích thước mỗi batch.
-            shuffle (bool): Có xáo trộn dataset cuối cùng không.
-
-        Returns:
-            tf.data.Dataset: Dataset được tạo từ generator.
+        Tạo TensorFlow dataset từ generator.
         """
         batch_count = 0
-
         def generator():
-            """
-            Generator con xử lý từng batch và yield từng mẫu riêng lẻ.
-            """
             nonlocal batch_count
             for X_batch, y_batch in data_generator:
                 if len(X_batch) == 0 or len(y_batch) == 0:

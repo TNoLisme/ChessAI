@@ -3,7 +3,7 @@ import chess.engine
 import numpy as np
 from chess_model import ChessModel  # Giả định bạn có class ChessModel
 
-# Chuyển đổi bàn cờ thành mảng 8x8x12, mỗi lớp kênh biểu diễn loại quân và màu sắc
+# Hàm prepare_game_state (lấy từ app.py)
 def board_to_array(board: chess.Board) -> np.ndarray:
     piece_map = {
         chess.PAWN: 0, chess.KNIGHT: 1, chess.BISHOP: 2,
@@ -21,7 +21,6 @@ def board_to_array(board: chess.Board) -> np.ndarray:
 
     return board_array
 
-# Chuẩn bị trạng thái trò chơi dưới dạng dictionary đầu vào cho mô hình AI
 def prepare_game_state(board: chess.Board, white_elo: float, black_elo: float, 
                        history: list = None, history_length: int = 8) -> dict:
     board_array = board_to_array(board)
@@ -60,7 +59,7 @@ def prepare_game_state(board: chess.Board, white_elo: float, black_elo: float,
         "black_elo": black_elo
     }
 
-# Tính chỉ số Elo mới của AI sau một loạt trận đấu
+# Hàm tính Elo
 def calculate_elo(current_elo, opponent_elo, results, k=32):
     expected_score = 1 / (1 + 10 ** ((opponent_elo - current_elo) / 400))
     actual_score = sum(results) / len(results)  # Trung bình điểm thực tế

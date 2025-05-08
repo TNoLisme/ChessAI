@@ -6,18 +6,18 @@ from tqdm import tqdm
 import logging
 from typing import List, Tuple, Dict, Optional
 
-# Thiết lập cấu hình logging để hiển thị thông báo
+# Thiết lập logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 
 class ChessDataProcessor:
     """
     Class xử lý dữ liệu cờ vua từ file CSV, chuyển thành vector và lưu dưới dạng file .npy.
     """
-
+    
     def __init__(self, history_length: int = 12):
         """
         Khởi tạo bộ xử lý dữ liệu cờ vua.
+
         Args:
             history_length (int): Số lượng nước đi lịch sử được lưu cho mỗi trạng thái.
         """
@@ -38,23 +38,21 @@ class ChessDataProcessor:
     def board_to_matrix(self, board: chess.Board) -> np.ndarray:
         """
         Chuyển trạng thái bàn cờ thành ma trận (8, 8, 12) dạng one-hot.
-        Mỗi lớp trong trục thứ 3 là một loại quân cờ (trắng hoặc đen).
         """
         piece_map = board.piece_map()
         board_matrix = np.zeros((8, 8, 12), dtype=np.int8)
-
+        
         for square, piece in piece_map.items():
             row, col = divmod(square, 8)
             index = self.piece_to_index.get(piece.symbol())
             if index is not None:
                 board_matrix[row][col][index] = 1
-
+        
         return board_matrix
 
     def uci_to_index(self, uci_move: str) -> Optional[Tuple[int, int]]:
         """
-        Chuyển nước đi dạng UCI (ví dụ: 'e2e4') thành chỉ số (from_square, to_square).
-        Trả về None nếu nước đi không hợp lệ.
+        Chuyển nước đi dạng UCI thành tuple (from_square, to_square).
         """
         try:
             from_square = chess.SQUARE_NAMES.index(uci_move[:2])
@@ -66,8 +64,7 @@ class ChessDataProcessor:
 
     def calculate_material(self, board: chess.Board) -> int:
         """
-        Tính tổng giá trị vật chất trên bàn cờ hiện tại.
-        Dùng để xác định giai đoạn ván cờ (khai cuộc, trung cuộc, tàn cuộc).
+        Tính tổng giá trị vật chất trên bàn cờ.
         """
         total_material = 0
         for square in chess.SQUARES:
@@ -78,8 +75,7 @@ class ChessDataProcessor:
 
     def process_game_data(self, row: pd.Series, validate_moves: bool = True) -> Tuple[List[Dict], List[Tuple[int, int, int]]]:
         """
-        Xử lý một ván cờ thành danh sách đặc trưng (X) và nhãn (y).
-        Mỗi bước đi trong ván cờ được mã hóa dưới dạng dữ liệu đầu vào (board state, side to move, ...) và đầu ra là nước đi tiếp theo.
+        Xử lý một ván cờ thành danh sách (X, y) cho huấn luyện.
         """
         moves = row['Moves'].split()
 
@@ -94,7 +90,7 @@ class ChessDataProcessor:
 
         for i in range(len(moves) - 1):
             move_uci = moves[i]
-            next_move = self.uci_to_index(moves[i + 1])
+            next_move = self.uci_to_index(moves[i+1])
 
             try:
                 if validate_moves:
@@ -167,16 +163,16 @@ class ChessDataProcessor:
 
         return X, y
 
-    def process_and_save_csv_data(self, csv_path: str, max_games: Optional[int] = None,
-                                  games_per_file: int = 1000, output_folder: str = "data") -> None:
+    def process_and_save_csv_data(self, csv_path: str, max_games: Optional[int] = None, 
+                                 games_per_file: int = 1000, output_folder: str = "data") -> None:
         """
-        Đọc dữ liệu từ file CSV, xử lý và lưu dưới dạng các file .npy.
+        Xử lý dữ liệu từ file CSV và lưu dưới dạng các file .npy.
 
         Args:
-            csv_path (str): Đường dẫn đến file CSV chứa ván cờ.
-            max_games (Optional[int]): Giới hạn số lượng ván cần xử lý.
-            games_per_file (int): Số lượng ván trong mỗi file .npy.
-            output_folder (str): Thư mục để lưu dữ liệu đã xử lý.
+            csv_path (str): Đường dẫn đến file CSV.
+            max_games (Optional[int]): Số ván cờ tối đa để xử lý (None để đọc toàn bộ).
+            games_per_file (int): Số ván cờ mỗi file .npy.
+            output_folder (str): Thư mục lưu kết quả.
         """
         print("🔄 Reading CSV file...")
         table_pgn = pd.read_csv(csv_path)
@@ -199,7 +195,7 @@ class ChessDataProcessor:
                 total_samples += len(X_game)
                 games_in_file += 1
                 if idx % 20000 == 0:
-                    print(f"Processed {idx + 1} games, {total_samples} samples")
+                    print(f"Processed {idx+1} games, {total_samples} samples")
 
             if games_in_file >= games_per_file:
                 output_path = os.path.join(output_folder, f"chess_data_{file_id}.npy")
@@ -213,14 +209,10 @@ class ChessDataProcessor:
             output_path = os.path.join(output_folder, f"chess_data_{file_id}.npy")
             np.save(output_path, {"X": all_X, "y": all_y}, allow_pickle=True)
             logging.info(f"Saved file: {output_path} with {len(all_X)} samples (final)")
-
+        
         print(f"✅ Processed {total_games} games, created {total_samples} samples, saved {file_id + 1} .npy files")
 
-
 def main():
-    """
-    Hàm chính để khởi chạy xử lý dữ liệu từ file CSV và lưu kết quả ra file .npy.
-    """
     processor = ChessDataProcessor(history_length=8)
     processor.process_and_save_csv_data(
         csv_path="src/ai/data/pgn_chess_data.csv",
@@ -229,7 +221,6 @@ def main():
         output_folder="src/ai/data"
     )
 
-
 if __name__ == "__main__":
-    # Gọi hàm main nếu file này được thực thi trực tiếp
+    
     main()
