@@ -21,10 +21,17 @@
 
 
   Link Demo Youtube: https://www.youtube.com/watch?v=qJOB90dMDaQ
+
+  
   Link tài liệu tiểu luận: https://docs.google.com/document/d/1k6A2fkB-_lUqtnydkYrP3s-jxniPZVNnnmDEWZ8k_0Q/edit?usp=sharing
  
 
   Do ban đầu nhóm triển khai bài tập lớn theo hướng học máy để có thể đạt Elo > 2300, tuy nhiên trong quá trình huấn luyện mô hình, nhóm gặp vấn đề nghiêm trọng về phần cứng (RAM và CPU) khi máy của các thành viên trong nhóm đều không phù hợp để training. Dù đã tối ưu dữ liệu và giảm kích thước batch, việc training vẫn kéo dài vẫn không ổn định, và càng về sau thì càng lâu. Em khá chắc hướng phát triển của nhóm em hiện tại nếu có thể thực hiện đầy đủ thì có thể đạt được tiêu chí về điểm Elo > 2300. Vì vậy em rất mong thầy có thể linh hoạt, cân nhắc về phần tiêu chí Elo để nhóm em có thể đạt được điểm tốt hơn trong bài giữa kỳ này. Chúng em biết mặc dù đây là lỗi của bàn thân nhóm em nhưng việc khắc phục và thay đổi hướng khác đã muộn khi phát hiện ra vấn đề. Mong thầy hiểu và thông cảm cho nhóm em ạ. 
+
+
+  Đóng góp của các thành viên trong nhóm:
+  1. Nguyễn Văn Thịnh: Xây dựng frontend, backend kết nối với model, tìm và xử lý dữ liệu, xây dựng mô hình dự án.
+  2. Phạm Ngọc Huy Hoàng: Hoàn thiện frontend, xây dựng mô hình dự án và trainning.
 
 ## Quy trình xử lý dữ liệu
 
@@ -49,6 +56,8 @@
 5. **Lưu dữ liệu**: Dữ liệu đã xử lý được lưu dưới dạng tệp `.npy`. Trong đó chúng tôi chia ra thành các tập train-val-test với tỉ lệ 8-1-1 trong các thư mục `data/train`, `data/val`, và `data/test` để tải hiệu quả trong quá trình huấn luyện.
 
   Lớp `ChessDataLoader` (`chess_data_loader.py`) quản lý việc tải các tệp `.npy` này theo batch, hỗ trợ xáo trộn và tạo generator để cung cấp dữ liệu cho huấn luyện.
+
+  Ngoài ra chúng tôi tạo thêm các ván cờ chất lượng cao với enginee của Stockfish, bổ sung khoảng 50.000 ván cờ giữa những enginee có Elo cao mức 20 của Stockfish.
 
 ## Kiến trúc mô hình
 
