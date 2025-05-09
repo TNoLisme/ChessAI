@@ -174,12 +174,12 @@ class ChessDataProcessor:
             games_per_file (int): Số ván cờ mỗi file .npy.
             output_folder (str): Thư mục lưu kết quả.
         """
-        print("🔄 Reading CSV file...")
+        print("Reading CSV file...")
         table_pgn = pd.read_csv(csv_path)
         if max_games is not None:
             table_pgn = table_pgn.head(max_games)
         total_games = len(table_pgn)
-        print(f"✅ Loaded {total_games} games from CSV")
+        print(f"Loaded {total_games} games from CSV")
 
         os.makedirs(output_folder, exist_ok=True)
         all_X, all_y = [], []
@@ -210,7 +210,7 @@ class ChessDataProcessor:
             np.save(output_path, {"X": all_X, "y": all_y}, allow_pickle=True)
             logging.info(f"Saved file: {output_path} with {len(all_X)} samples (final)")
         
-        print(f"✅ Processed {total_games} games, created {total_samples} samples, saved {file_id + 1} .npy files")
+        print(f"Processed {total_games} games, created {total_samples} samples, saved {file_id + 1} .npy files")
 
 def main():
     processor = ChessDataProcessor(history_length=8)

@@ -47,12 +47,12 @@ class ChessModelTrainer:
         total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("train")
                            for data in [np.load(os.path.join(self.train_folder, file), allow_pickle=True).item()])
         steps_per_epoch = (total_samples + batch_size - 1) // batch_size
-        print(f"📊 Train dataset: {total_samples} samples, {steps_per_epoch} steps per epoch")
+        print(f"Train dataset: {total_samples} samples, {steps_per_epoch} steps per epoch")
 
         train_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
             train_generator, batch_size, shuffle=shuffle
         )
-        print("✅ Train dataset created")
+        print("Train dataset created")
         return train_ds, steps_per_epoch
 
     def prepare_validation_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
@@ -62,7 +62,7 @@ class ChessModelTrainer:
         Returns:
             Tuple[tf.data.Dataset, int]: Dataset và số validation steps.
         """
-        print("🔄 Creating validation data generator...")
+        print("Creating validation data generator...")
         val_generator = self.data_loader.load_data_generator(
             batch_size=1000, shuffle=shuffle, dataset_type="val"
         )
@@ -71,12 +71,12 @@ class ChessModelTrainer:
         total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("val")
                            for data in [np.load(os.path.join(self.val_folder, file), allow_pickle=True).item()])
         validation_steps = (total_samples + batch_size - 1) // batch_size if total_samples > 0 else 1
-        print(f"📊 Validation dataset: {total_samples} samples, {validation_steps} validation steps")
+        print(f"Validation dataset: {total_samples} samples, {validation_steps} validation steps")
 
         val_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
             val_generator, batch_size, shuffle=shuffle
         ).cache()
-        print("✅ Validation dataset created")
+        print("Validation dataset created")
         return val_ds, validation_steps
 
     def prepare_test_dataset(self, batch_size: int = 16, shuffle: bool = False) -> Tuple[tf.data.Dataset, int]:
@@ -86,7 +86,7 @@ class ChessModelTrainer:
         Returns:
             Tuple[tf.data.Dataset, int]: Dataset và số test steps.
         """
-        print("🔄 Creating test data generator...")
+        print("Creating test data generator...")
         test_generator = self.data_loader.load_data_generator(
             batch_size=1000, shuffle=shuffle, dataset_type="test"
         )
@@ -95,12 +95,12 @@ class ChessModelTrainer:
         total_samples = sum(len(data['X']) for file in self.data_loader.list_data_files("test")
                            for data in [np.load(os.path.join(self.test_folder, file), allow_pickle=True).item()])
         test_steps = (total_samples + batch_size - 1) // batch_size if total_samples > 0 else 1
-        print(f"📊 Test dataset: {total_samples} samples, {test_steps} test steps")
+        print(f"Test dataset: {total_samples} samples, {test_steps} test steps")
 
         test_ds = self.preprocessor.create_tensorflow_dataset_from_generator(
             test_generator, batch_size, shuffle=shuffle
         ).cache()
-        print("✅ Test dataset created")
+        print("Test dataset created")
         return test_ds, test_steps
 
     def train_model(self, model: Optional[ChessModel] = None, epochs: int = 100, batch_size: int = 16) -> ChessModel:
@@ -109,9 +109,9 @@ class ChessModelTrainer:
         """
         os.makedirs(self.model_save_dir, exist_ok=True)
         
-        print("🔄 Initializing new model...")
+        print("Initializing new model...")
         model = ChessModel() if model is None else model
-        print("✅ Model initialized")
+        print("Model initialized")
 
         # Chuẩn bị dataset huấn luyện và validation
         train_ds, steps_per_epoch = self.prepare_train_dataset(batch_size=batch_size, shuffle=True)
@@ -139,26 +139,26 @@ class ChessModelTrainer:
             steps_per_epoch=steps_per_epoch,
             validation_steps=validation_steps
         )
-        print("✅ Training completed")
+        print("Training completed")
 
         mem_info = psutil.virtual_memory()
         print(f"RAM usage after training: {mem_info.percent}% ({mem_info.used/1024**3:.2f}GB / {mem_info.total/1024**3:.2f}GB)")
 
         final_model_path = os.path.join(self.model_save_dir, 'chess_model_final.keras')
         model.save(final_model_path)
-        print(f"💾 Saved final model at: {final_model_path}")
+        print(f"Saved final model at: {final_model_path}")
 
         # Đánh giá trên tập validation
-        print("🔍 Validating model...")
+        print("Validating model...")
         val_metrics = self.validate_model(model, batch_size=batch_size)
-        print("✅ Validation completed. Metrics:")
+        print("Validation completed. Metrics:")
         for name, value in val_metrics.items():
             print(f"  {name}: {value:.4f}")
 
         # Đánh giá trên tập test
-        print("🔍 Testing model...")
+        print("Testing model...")
         test_metrics = self.test_model(model, batch_size=batch_size)
-        print("✅ Test completed. Metrics:")
+        print("Test completed. Metrics:")
         for name, value in test_metrics.items():
             print(f"  {name}: {value:.4f}")
 
@@ -171,7 +171,7 @@ class ChessModelTrainer:
         if model is None:
             best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')
             model = ChessModel.load(best_model_path)
-            print(f"✅ Loaded model from: {best_model_path}")
+            print(f"Loaded model from: {best_model_path}")
 
         val_ds, validation_steps = self.prepare_validation_dataset(batch_size=batch_size)
         print("🔍 Evaluating on validation dataset...")
@@ -186,7 +186,7 @@ class ChessModelTrainer:
         if model is None:
             best_model_path = os.path.join(self.model_save_dir, 'chess_model_best.keras')
             model = ChessModel.load(best_model_path)
-            print(f"✅ Loaded model from: {best_model_path}")
+            print(f"Loaded model from: {best_model_path}")
 
         test_ds, test_steps = self.prepare_test_dataset(batch_size=batch_size)
         print("🔍 Evaluating on test dataset...")

@@ -77,7 +77,7 @@ try:
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
     engine.configure({"Skill Level": 0})  # Elo ~2000 (ước lượng)
 except Exception as e:
-    print(f"❌ Error loading Stockfish: {e}")
+    print(f"Error loading Stockfish: {e}")
     exit(1)
 
 # Thiết lập

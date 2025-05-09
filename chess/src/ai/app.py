@@ -18,9 +18,9 @@ app = Flask(
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'chess_model_best.keras')
 
 # Load mô hình khi server khởi động
-print("🔄 Loading Chess AI model...")
+print("Loading Chess AI model...")
 model = ChessModel.load(MODEL_PATH)
-print("✅ Model loaded successfully")
+print("Model loaded successfully")
 
 # Đường dẫn đến file CSV lưu lịch sử ván đấu
 CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'games.csv')
@@ -42,8 +42,6 @@ def get_next_game_id():
         next(reader)  # Bỏ qua tiêu đề
         game_ids = [int(row[0]) for row in reader if row and row[0].isdigit()]
         return max(game_ids) + 1 if game_ids else 1
-
-# ===================== HÀM HỖ TRỢ =====================
 
 def board_to_array(board: chess.Board) -> np.ndarray:
     piece_map = {
@@ -102,14 +100,12 @@ def prepare_game_state(board: chess.Board, white_elo: float, black_elo: float,
         "black_elo": black_elo
     }
 
-# ===================== ROUTES =====================
-
 # Trang chính
 @app.route('/')
 def index():
     index_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../index.html'))
     if not os.path.exists(index_path):
-        return f"❌ index.html not found at {index_path}", 404
+        return f"index.html not found at {index_path}", 404
     return send_file(index_path)
 
 # Trả về các file tĩnh (JS, CSS, IMG, LIB, HTML, ...)
@@ -117,7 +113,7 @@ def index():
 def static_files(filename):
     file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../', filename))
     if not os.path.exists(file_path):
-        return f"❌ File {filename} not found.", 404
+        return f"File {filename} not found.", 404
     return send_file(file_path)
 
 # Dự đoán nước đi từ AI
@@ -146,7 +142,7 @@ def get_ai_move():
             return jsonify({'error': 'No legal move predicted'}), 500
 
     except Exception as e:
-        print(f"🔥 Error: {e}")
+        print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Lưu lịch sử ván đấu vào CSV
@@ -157,18 +153,18 @@ def save_game():
         history = data.get('history', '')
 
         if not history or not isinstance(history, str):
-            print(f"🔥 Invalid history received: {history}")
+            print(f"Invalid history received: {history}")
             return jsonify({'error': 'Invalid or empty history'}), 400
 
         # Kiểm tra định dạng history (chuỗi các nước đi, ví dụ: "e2e4 e7e5")
         moves = history.split()
         if not moves:
-            print(f"🔥 Empty history split: {history}")
+            print(f"Empty history split: {history}")
             return jsonify({'error': 'Empty history'}), 400
 
         for move in moves:
             if not re.match(r'^[a-h][1-8][a-h][1-8]$', move):
-                print(f"🔥 Invalid move format: {move} in history: {history}")
+                print(f"Invalid move format: {move} in history: {history}")
                 return jsonify({'error': f'Invalid move format: {move}'}), 400
 
         # Khởi tạo CSV nếu chưa tồn tại
@@ -182,14 +178,12 @@ def save_game():
             writer = csv.writer(csvfile)
             writer.writerow([game_id, history])
 
-        print(f"✅ Saved game {game_id} with history: {history}")
+        print(f"Saved game {game_id} with history: {history}")
         return jsonify({'message': 'Game saved successfully', 'game_id': game_id})
 
     except Exception as e:
-        print(f"🔥 Error in save_game: {e}")
+        print(f"Error in save_game: {e}")
         return jsonify({'error': str(e)}), 500
-
-# ===================== CHẠY SERVER =====================
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

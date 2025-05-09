@@ -14,13 +14,17 @@
 - [Tích hợp lịch sử ván đấu](#tích-hợp-lịch-sử-ván-đấu)
 - [Cài đặt và thiết lập](#cài-đặt-và-thiết-lập)
 - [Hướng dẫn sử dụng](#hướng-dẫn-sử-dụng)
-- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Cải tiến trong tương lai](#cải-tiến-trong-tương-lai)
-- [Đóng góp](#đóng-góp)
-- [Giấy phép](#giấy-phép)
+
 
 ## Tổng quan dự án
   AI Chess là một mô hình AI dự đoán nước đi tiếp theo dựa trên trạng thái bàn cờ, sử dụng mạng nơ-ron tích chập (CNN) kết hợp với các tầng hồi tiếp và dày đặc. Hệ thống xử lý các ván cờ được lưu trong định dạng CSV, chuyển đổi chúng thành định dạng phù hợp để huấn luyện, và cung cấp dự đoán thông qua giao diện web dựa trên Flask. Sau mỗi ván đấu, lịch sử nước đi được lưu lại và có thể được sử dụng để bổ sung dữ liệu huấn luyện.
+
+
+  Link Demo Youtube: https://www.youtube.com/watch?v=qJOB90dMDaQ
+  Link tài liệu tiểu luận: https://docs.google.com/document/d/1k6A2fkB-_lUqtnydkYrP3s-jxniPZVNnnmDEWZ8k_0Q/edit?usp=sharing
+ 
+
+  Do ban đầu nhóm triển khai bài tập lớn theo hướng học máy để có thể đạt Elo > 2300, tuy nhiên trong quá trình huấn luyện mô hình, nhóm gặp vấn đề nghiêm trọng về phần cứng (RAM và CPU) khi máy của các thành viên trong nhóm đều không phù hợp để training. Dù đã tối ưu dữ liệu và giảm kích thước batch, việc training vẫn kéo dài vẫn không ổn định, và càng về sau thì càng lâu. Em khá chắc hướng phát triển của nhóm em hiện tại nếu có thể thực hiện đầy đủ thì có thể đạt được tiêu chí về điểm Elo > 2300. Vì vậy em rất mong thầy có thể linh hoạt, cân nhắc về phần tiêu chí Elo để nhóm em có thể đạt được điểm tốt hơn trong bài giữa kỳ này. Chúng em biết mặc dù đây là lỗi của bàn thân nhóm em nhưng việc khắc phục và thay đổi hướng khác đã muộn khi phát hiện ra vấn đề. Mong thầy hiểu và thông cảm cho nhóm em ạ. 
 
 ## Quy trình xử lý dữ liệu
 
@@ -160,7 +164,7 @@
   - Mở trình duyệt và truy cập `http://localhost:5000`.
   - Sử dụng giao diện web để thực hiện nước đi. AI sẽ trả lời bằng cách dự đoán nước đi qua endpoint `/get_ai_move`.
 - **Lưu ván cờ**:
-  - Sau mỗi ván, lịch sử nước đi được tự động lưu vào `src/ai/data/games.csv`.
+  - Sau mỗi ván kết thúc, lịch sử nước đi được tự động lưu vào `src/ai/data/games.csv`.
 - **Đánh giá Elo**:
   - Chạy script đánh giá để so sánh AI với Stockfish:
     ```bash
@@ -168,27 +172,3 @@
     ```
   - Script sẽ chạy 20 ván và tính toán Elo của AI dựa trên kết quả.
 
-## Cấu trúc thư mục
-```
-chess-ai/
-├── src/
-│   ├── ai/
-│   │   ├── data/                   # Thư mục chứa dữ liệu train/val/test và games.csv
-│   │   ├── models/                 # Thư mục lưu mô hình đã huấn luyện
-│   │   ├── app.py                  # Ứng dụng web Flask
-│   │   ├── chess_data_loader.py    # Tải dữ liệu .npy
-│   │   ├── chess_data_preprocessor.py # Tiền xử lý dữ liệu
-│   │   ├── chess_model.py          # Kiến trúc mô hình AI
-│   │   ├── chess_model_trainer.py  # Quản lý huấn luyện mô hình
-│   │   ├── evaluate_elo.py         # Đánh giá Elo so với Stockfish
-│   │   ├── process_csv_to_npy.py   # Chuyển đổi CSV thành .npy
-│   │   ├── train_model.py          # Script khởi động huấn luyện
-│   ├── index.html                  # Giao diện web
-│   ├── lib/                        # Thư viện bên ngoài (Stockfish,...)
-```
-
-## Cải tiến trong tương lai
-- Tích hợp thêm dữ liệu ván cờ từ các nguồn trực tuyến để tăng cường tập huấn luyện.
-- Tối ưu hóa mô hình bằng cách sử dụng kiến trúc nhẹ hơn hoặc áp dụng kỹ thuật pruning.
-- Thêm tính năng phân tích ván cờ, đề xuất chiến lược hoặc giải thích nước đi của AI.
-- Hỗ trợ chế độ chơi giữa hai người hoặc đấu với AI ở nhiều cấp độ khó khác nhau.
